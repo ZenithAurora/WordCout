@@ -3,81 +3,56 @@
 #include <string.h>
 #include <ctype.h>
 
-// 统计字符数函数
-long count_chars(FILE *file) {
-    long count = 0;
-    int ch;
-    
-    // 重置文件指针到开头
-    fseek(file, 0, SEEK_SET);
-    
-    // 逐个读取字符，直到文件结束
-    while ((ch = fgetc(file)) != EOF) {
-        count++;
+// 函数声明（集中管理，提升可读性）
+static long count_chars(FILE *file);
+static long count_words(FILE *file);
+
+int main(int argc, char *argv[]) {
+    // 1. 参数合法性校验（精简提示信息）
+    if (argc != 3 || (strcmp(argv[1], "-c") != 0 && strcmp(argv[1], "-w") != 0)) {
+        fprintf(stderr, "用法: %s [-c|-w] 文件名\n示例: %s -c input.txt\n", argv[0], argv[0]);
+        return EXIT_FAILURE;
     }
-    
+
+    // 2. 打开文件（使用标准错误流输出错误）
+    FILE *file = fopen(argv[2], "r");
+    if (!file) {
+        perror("文件打开失败"); // 自动拼接系统错误信息，更友好
+        return EXIT_FAILURE;
+    }
+
+    // 3. 执行统计逻辑（精简分支）
+    long result = (strcmp(argv[1], "-c") == 0) ? count_chars(file) : count_words(file);
+    printf("%s：%ld\n", (strcmp(argv[1], "-c") == 0) ? "字符数" : "单词数", result);
+
+    // 4. 关闭文件
+    fclose(file);
+    return EXIT_SUCCESS;
+}
+
+// 统计字符数（精简循环逻辑）
+static long count_chars(FILE *file) {
+    fseek(file, 0, SEEK_SET);
+    long count = 0;
+    while (fgetc(file) != EOF) count++;
     return count;
 }
 
-// 统计单词数函数
-long count_words(FILE *file) {
-    long count = 0;
-    int ch;
-    int in_word = 0;  // 标记是否在单词中，0表示不在，1表示在
-    
-    // 重置文件指针到开头
+// 统计单词数（优化单词判断逻辑，使用标准库函数）
+static long count_words(FILE *file) {
     fseek(file, 0, SEEK_SET);
-    
-    // 逐个读取字符
+    long count = 0;
+    int in_word = 0;
+    int ch;
+
     while ((ch = fgetc(file)) != EOF) {
-        // 如果是分隔符（空格、逗号、制表符、换行符）
-        if (ch == ' ' || ch == ',' || ch == '\t' || ch == '\n') {
+        // 使用isspace判断空白字符，覆盖所有空白类型（更通用）
+        if (isspace(ch)) {
             in_word = 0;
-        } 
-        // 如果不是分隔符且不在单词中，说明新单词开始
-        else if (!in_word) {
+        } else if (!in_word) {
             in_word = 1;
             count++;
         }
-        // 其他情况（在单词中），不做处理
     }
-    
     return count;
-}
-
-int main(int argc, char *argv[]) {
-    // 检查命令行参数数量
-    if (argc != 3) {
-        printf("用法: %s [-c|-w] 文件名\n", argv[0]);
-        printf("示例: %s -c input.txt\n", argv[0]);
-        return 1;
-    }
-    
-    // 检查参数是否合法
-    if (strcmp(argv[1], "-c") != 0 && strcmp(argv[1], "-w") != 0) {
-        printf("错误：参数必须是 -c 或 -w\n");
-        return 1;
-    }
-    
-    // 打开文件
-    FILE *file = fopen(argv[2], "r");
-    if (file == NULL) {
-        printf("错误：无法打开文件 %s\n", argv[2]);
-        return 1;
-    }
-    
-    long result = 0;
-    // 根据参数执行不同的统计逻辑
-    if (strcmp(argv[1], "-c") == 0) {
-        result = count_chars(file);
-        printf("字符数：%ld\n", result);
-    } else {
-        result = count_words(file);
-        printf("单词数：%ld\n", result);
-    }
-    
-    // 关闭文件
-    fclose(file);
-    
-    return 0;
 }
